@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
+import { MeasurementFormData } from '../lib/types';
 
 interface MeasurementFormProps {
-  onSubmit: (data: any) => void;
-  initialData?: any;
+  onSubmit: (data: MeasurementFormData) => void;
+  initialData?: Partial<MeasurementFormData>;
 }
 
 export default function MeasurementForm({ onSubmit, initialData = {} }: MeasurementFormProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<MeasurementFormData>({
     name: initialData.name || '',
     measurementDate: initialData.measurementDate || new Date().toISOString().split('T')[0],
     height: initialData.height || '',
@@ -26,6 +27,7 @@ export default function MeasurementForm({ onSubmit, initialData = {} }: Measurem
       second: initialData.fr?.second || '',
     },
     cs10: initialData.cs10 || '',
+    bi: initialData.bi || '',
     notes: initialData.notes || '',
   });
 
@@ -34,18 +36,18 @@ export default function MeasurementForm({ onSubmit, initialData = {} }: Measurem
     
     if (name.includes('.')) {
       const [parent, child] = name.split('.');
-      setFormData({
-        ...formData,
+      setFormData(prev => ({
+        ...prev,
         [parent]: {
-          ...formData[parent as keyof typeof formData],
+          ...(prev[parent as keyof typeof prev] as Record<string, string | number>),
           [child]: value,
         },
-      });
+      }));
     } else {
-      setFormData({
-        ...formData,
+      setFormData(prev => ({
+        ...prev,
         [name]: value,
-      });
+      }));
     }
   };
 
@@ -53,27 +55,27 @@ export default function MeasurementForm({ onSubmit, initialData = {} }: Measurem
     e.preventDefault();
     
     // 最良値の計算
-    const processedData = {
+    const processedData: MeasurementFormData = {
       ...formData,
       tug: {
         ...formData.tug,
         best: Math.min(
-          parseFloat(formData.tug.first) || 0,
-          parseFloat(formData.tug.second) || 0
+          parseFloat(formData.tug.first as string) || 0,
+          parseFloat(formData.tug.second as string) || 0
         ),
       },
       walkingSpeed: {
         ...formData.walkingSpeed,
         best: Math.max(
-          parseFloat(formData.walkingSpeed.first) || 0,
-          parseFloat(formData.walkingSpeed.second) || 0
+          parseFloat(formData.walkingSpeed.first as string) || 0,
+          parseFloat(formData.walkingSpeed.second as string) || 0
         ),
       },
       fr: {
         ...formData.fr,
         best: Math.max(
-          parseFloat(formData.fr.first) || 0,
-          parseFloat(formData.fr.second) || 0
+          parseFloat(formData.fr.first as string) || 0,
+          parseFloat(formData.fr.second as string) || 0
         ),
       },
     };
@@ -100,6 +102,7 @@ export default function MeasurementForm({ onSubmit, initialData = {} }: Measurem
         second: '',
       },
       cs10: '',
+      bi: '',
       notes: '',
     });
   };
@@ -110,9 +113,9 @@ export default function MeasurementForm({ onSubmit, initialData = {} }: Measurem
         <h1 className="text-2xl font-bold mb-6 text-center">体力測定フォーム</h1>
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 gap-4">
-            {/* 名前 */}
+            {/* 氏名 */}
             <div className="flex items-center">
-              <label className="w-32 text-right mr-4">名前</label>
+              <label className="w-32 text-right mr-4">氏名</label>
               <input
                 type="text"
                 name="name"
@@ -236,7 +239,7 @@ export default function MeasurementForm({ onSubmit, initialData = {} }: Measurem
                     value={formData.fr.first}
                     onChange={handleChange}
                     className="flex-1 p-2 rounded bg-red-50"
-                    step="0.1"
+                    step="0.01"
                   />
                 </div>
                 <div className="flex-1 flex items-center">
@@ -247,22 +250,37 @@ export default function MeasurementForm({ onSubmit, initialData = {} }: Measurem
                     value={formData.fr.second}
                     onChange={handleChange}
                     className="flex-1 p-2 rounded bg-red-50"
-                    step="0.1"
+                    step="0.01"
                   />
                 </div>
               </div>
             </div>
 
-            {/* CS10 */}
+            {/* CS-10 */}
             <div className="flex items-center">
-              <label className="w-32 text-right mr-4">CS10</label>
+              <label className="w-32 text-right mr-4">CS-10</label>
               <input
                 type="number"
                 name="cs10"
                 value={formData.cs10}
                 onChange={handleChange}
                 className="flex-1 p-2 rounded bg-red-50"
-                step="1"
+                step="0.1"
+                required
+              />
+            </div>
+
+            {/* BI */}
+            <div className="flex items-center">
+              <label className="w-32 text-right mr-4">BI</label>
+              <input
+                type="number"
+                name="bi"
+                value={formData.bi}
+                onChange={handleChange}
+                className="flex-1 p-2 rounded bg-red-50"
+                step="0.1"
+                required
               />
             </div>
 
@@ -273,26 +291,26 @@ export default function MeasurementForm({ onSubmit, initialData = {} }: Measurem
                 name="notes"
                 value={formData.notes}
                 onChange={handleChange}
-                className="flex-1 p-2 rounded bg-red-50 h-24"
+                className="flex-1 p-2 rounded bg-red-50"
+                rows={3}
               />
             </div>
+          </div>
 
-            {/* ボタン */}
-            <div className="flex justify-end space-x-4 mt-4">
-              <button
-                type="button"
-                onClick={handleClear}
-                className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-              >
-                クリア
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                送信
-              </button>
-            </div>
+          <div className="mt-6 flex justify-center space-x-4">
+            <button
+              type="submit"
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+            >
+              送信
+            </button>
+            <button
+              type="button"
+              onClick={handleClear}
+              className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+            >
+              クリア
+            </button>
           </div>
         </form>
       </div>

@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import MeasurementForm from '../../components/MeasurementForm';
 import { getUsers, getUserById, createMeasurement } from '../../lib/db';
+import { User, MeasurementFormData } from '../../lib/types';
 
 export default function NewMeasurementPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const userId = searchParams.get('userId');
   
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,17 +37,37 @@ export default function NewMeasurementPage() {
   }, [userId]);
 
   // 測定データの送信
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: MeasurementFormData) => {
     if (!selectedUser) {
       setError('ユーザーが見つかりません');
       return;
     }
 
     try {
-      // ユーザーIDを追加
+      // 文字列を数値に変換
       const measurementData = {
-        ...data,
         userId: selectedUser.id,
+        measurementDate: data.measurementDate,
+        height: Number(data.height),
+        weight: Number(data.weight),
+        tug: {
+          first: Number(data.tug.first),
+          second: Number(data.tug.second),
+          best: Number(data.tug.best || Math.min(Number(data.tug.first), Number(data.tug.second))),
+        },
+        walkingSpeed: {
+          first: Number(data.walkingSpeed.first),
+          second: Number(data.walkingSpeed.second),
+          best: Number(data.walkingSpeed.best || Math.max(Number(data.walkingSpeed.first), Number(data.walkingSpeed.second))),
+        },
+        fr: {
+          first: Number(data.fr.first),
+          second: Number(data.fr.second),
+          best: Number(data.fr.best || Math.max(Number(data.fr.first), Number(data.fr.second))),
+        },
+        cs10: Number(data.cs10),
+        bi: Number(data.bi || 0), // biがない場合は0をデフォルト値として使用
+        notes: data.notes,
       };
 
       await createMeasurement(measurementData);

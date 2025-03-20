@@ -1,21 +1,23 @@
 'use client';
 
 import { formatDate, calculateAge } from '../lib/utils';
-
-interface UserInfo {
-  id: string;
-  lastName: string;
-  firstName: string;
-  gender: string;
-  birthDate: string;
-  medicalHistory: string[];
-}
+import { User } from '../lib/types';
 
 interface UserInfoDisplayProps {
-  userInfo: UserInfo;
+  userInfo: User | null;
 }
 
 export default function UserInfoDisplay({ userInfo }: UserInfoDisplayProps) {
+  if (!userInfo) {
+    return (
+      <div className="mb-6">
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 p-4 rounded">
+          ユーザー情報が見つかりません
+        </div>
+      </div>
+    );
+  }
+  
   const { lastName, firstName, gender, birthDate, medicalHistory = [] } = userInfo;
   
   // 性別を「男」か「女」で表示

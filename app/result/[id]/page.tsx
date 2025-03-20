@@ -5,6 +5,7 @@ import { getUserById, getMeasurementsByUserId } from '../../lib/db';
 import UserInfoDisplay from '../../components/UserInfoDisplay';
 import ResultTable from '../../components/ResultTable';
 import ResultChart from '../../components/ResultChart';
+import { User, Measurement } from '../../lib/types';
 
 interface PageProps {
   params: Promise<{
@@ -14,8 +15,8 @@ interface PageProps {
 
 export default function ResultPage({ params }: PageProps) {
   const { id } = use(params);
-  const [user, setUser] = useState<any>(null);
-  const [measurements, setMeasurements] = useState<any[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,7 +64,7 @@ export default function ResultPage({ params }: PageProps) {
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-2xl font-bold mb-6">
-        {user.lastName} {user.firstName}さんの評価結果
+        {user?.lastName} {user?.firstName}さんの評価結果
       </h1>
       
       {/* ユーザー基本情報 */}
