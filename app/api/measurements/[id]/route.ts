@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMeasurementById, updateMeasurement, deleteMeasurement } from '../../../lib/db';
-
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
+import { getMeasurementById, updateMeasurement, deleteMeasurement } from '@/app/lib/db';
 
 // 特定の測定データの取得
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, context: { params: { id: string } }) {
   try {
-    const { id } = params;
+    const { id } = context.params;
     const measurement = await getMeasurementById(id);
     
     if (!measurement) {
@@ -31,10 +25,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 // 測定データの更新
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(request: NextRequest, context: { params: { id: string } }) {
   try {
-    const { id } = params;
+    const { id } = context.params;
     const data = await request.json();
+    
+    if (!data) {
+      return NextResponse.json(
+        { error: 'リクエストボディが見つかりません' },
+        { status: 400 }
+      );
+    }
     
     const measurement = await getMeasurementById(id);
     if (!measurement) {
@@ -44,30 +45,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
     
-    const updatedMeasurement = await updateMeasurement(id, {
-      measurementDate: data.measurementDate,
-      height: parseFloat(data.height) || 0,
-      weight: parseFloat(data.weight) || 0,
-      tug: {
-        first: parseFloat(data.tug?.first) || 0,
-        second: parseFloat(data.tug?.second) || 0,
-        best: parseFloat(data.tug?.best) || 0,
-      },
-      walkingSpeed: {
-        first: parseFloat(data.walkingSpeed?.first) || 0,
-        second: parseFloat(data.walkingSpeed?.second) || 0,
-        best: parseFloat(data.walkingSpeed?.best) || 0,
-      },
-      fr: {
-        first: parseFloat(data.fr?.first) || 0,
-        second: parseFloat(data.fr?.second) || 0,
-        best: parseFloat(data.fr?.best) || 0,
-      },
-      cs10: parseInt(data.cs10) || 0,
-      bi: parseInt(data.bi) || 0,
-      notes: data.notes || '',
-    });
-    
+    const updatedMeasurement = await updateMeasurement(id, data);
     return NextResponse.json(updatedMeasurement);
   } catch (error) {
     console.error('Error updating measurement:', error);
@@ -79,9 +57,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 }
 
 // 測定データの削除
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
   try {
-    const { id } = params;
+    const { id } = context.params;
     
     const measurement = await getMeasurementById(id);
     if (!measurement) {
@@ -91,16 +69,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
     
-    const success = await deleteMeasurement(id);
-    
-    if (success) {
-      return new NextResponse(null, { status: 204 });
-    } else {
-      return NextResponse.json(
-        { error: '測定データの削除に失敗しました' },
-        { status: 500 }
-      );
-    }
+    await deleteMeasurement(id);
+    return NextResponse.json({ message: '測定データが削除されました' });
   } catch (error) {
     console.error('Error deleting measurement:', error);
     return NextResponse.json(

@@ -1,12 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import MeasurementForm from '../../components/MeasurementForm';
-import { getUsers, getUserById, createMeasurement } from '../../lib/db';
 import { User, MeasurementFormData } from '../../lib/types';
 
 export default function NewMeasurementPage() {
+  const router = useRouter();
+  
+  // useSearchParamsをSuspense境界内で使用
+  return (
+    <div>
+      <h1 className="text-2xl font-bold mb-6 text-center">体力測定データ入力</h1>
+      <Suspense fallback={<div>ロード中...</div>}>
+        <MeasurementPageContent />
+      </Suspense>
+    </div>
+  );
+}
+
+// コンテンツコンポーネントを分離
+function MeasurementPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const userId = searchParams.get('userId');
@@ -20,7 +34,11 @@ export default function NewMeasurementPage() {
     const fetchUser = async () => {
       try {
         if (userId) {
-          const user = await getUserById(userId);
+          const response = await fetch(`/api/users/${userId}`);
+          if (!response.ok) {
+            throw new Error('ユーザー情報の取得に失敗しました');
+          }
+          const user = await response.json();
           if (user) {
             setSelectedUser(user);
           }
@@ -70,7 +88,18 @@ export default function NewMeasurementPage() {
         notes: data.notes,
       };
 
-      await createMeasurement(measurementData);
+      // APIでデータを保存
+      const response = await fetch('/api/measurements', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(measurementData),
+      });
+
+      if (!response.ok) {
+        throw new Error('測定データの保存に失敗しました');
+      }
       
       // 測定結果ページへリダイレクト
       router.push(`/result/${selectedUser.id}`);
@@ -85,9 +114,7 @@ export default function NewMeasurementPage() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6 text-center">体力測定データ入力</h1>
-      
+    <>
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
@@ -103,6 +130,6 @@ export default function NewMeasurementPage() {
           ユーザーが見つかりません
         </div>
       )}
-    </div>
+    </>
   );
 }

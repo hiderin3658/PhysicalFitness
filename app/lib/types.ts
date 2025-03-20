@@ -1,5 +1,3 @@
-'use client';
-
 interface User {
   id: string;
   lastName: string;
