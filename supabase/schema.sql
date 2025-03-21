@@ -45,10 +45,10 @@ create policy "Anyone can read measurements"
   using (true);
 
 -- 権限のあるユーザーに書き込み権限を付与
-create policy "Authenticated users can insert users"
+create policy "Anyone can insert users"
   on public.users
   for insert
-  to authenticated
+  to anon, authenticated
   with check (true);
 
 create policy "Authenticated users can insert measurements"

@@ -4,15 +4,18 @@ import { User, Measurement, MeasurementFormData } from './types';
 
 // 環境変数の設定（デフォルト値付き）
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy-key';
+// フロントエンド用の匿名キー
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy-key';
+// サーバーサイド（APIルート）用のサービスロールキー
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // 環境変数が設定されていない場合は警告ログを出力
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
   console.warn('Supabase環境変数が設定されていません。Vercelダッシュボードで環境変数を設定してください。');
 }
 
-// Supabaseクライアントの初期化
-const supabase = createClient(supabaseUrl, supabaseKey, {
+// クライアント側で使用するSupabaseクライアント
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
@@ -23,6 +26,20 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
     },
   },
 });
+
+// サーバー側APIルートで使用するサービスロール権限付きクライアント
+// サービスロールはRLSをバイパスできる特別な権限を持つ
+const adminAuthEnabled = !!supabaseServiceKey;
+const adminClient = adminAuthEnabled 
+  ? createClient(supabaseUrl, supabaseServiceKey || '', {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+  : supabase; // フォールバックとして通常のクライアントを使用
+
+console.log('Admin認証クライアント有効:', adminAuthEnabled);
 
 // Supabaseクライアントの初期化完了
 
@@ -101,12 +118,13 @@ export const createUser = async (userData: Omit<User, 'id' | 'createdAt' | 'upda
   
   console.log('DB: Supabaseへ送信するデータ:', JSON.stringify(dbUserData));
   console.log('DB: Supabase URL:', supabaseUrl);
-  console.log('DB: Supabase API Key:', supabaseKey ? '設定済み（非表示）' : '未設定');
+  console.log('DB: Admin認証クライアント使用:', adminAuthEnabled);
   
   try {
     console.log('DB: Supabase insert操作開始');
     
-    const { data, error, status } = await supabase
+    // 管理者クライアントを使用してRLSをバイパス
+    const { data, error, status } = await adminClient
       .from('users')
       .insert([dbUserData])
       .select()
