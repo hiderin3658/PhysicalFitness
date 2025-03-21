@@ -13,6 +13,7 @@ interface MeasurementFormProps {
 
 export default function MeasurementForm({ onSubmit, initialData = {} }: MeasurementFormProps) {
   const [formData, setFormData] = useState<MeasurementFormData>({
+    userId: userId,
     name: initialData.name || '',
     measurementDate: initialData.measurementDate || new Date().toISOString().split('T')[0],
     height: initialData.height || '',
@@ -105,6 +106,7 @@ export default function MeasurementForm({ onSubmit, initialData = {} }: Measurem
 
   const handleClear = () => {
     setFormData({
+      userId: userId,
       name: '',
       measurementDate: new Date().toISOString().split('T')[0],
       height: '',
