@@ -1,19 +1,19 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import MeasurementForm from '../../components/MeasurementForm';
 import { getUserById, createMeasurement } from '../../lib/db';
-import { User, MeasurementFormData } from '../../../app/lib/types';
+import { User, MeasurementFormData } from '../../lib/types';
 
 interface PageProps {
-  params: Promise<{
+  params: {
     id: string;
-  }>;
+  };
 }
 
 export default function MeasurementPage({ params }: PageProps) {
-  const { id } = use(params);
+  const { id } = params;
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { getUserById, getMeasurementsByUserId } from '../../lib/db';
 import UserInfoDisplay from '../../components/UserInfoDisplay';
 import ResultTable from '../../components/ResultTable';
@@ -8,13 +8,13 @@ import ResultChart from '../../components/ResultChart';
 import { User, Measurement } from '../../lib/types';
 
 interface PageProps {
-  params: Promise<{
+  params: {
     id: string;
-  }>;
+  };
 }
 
 export default function ResultPage({ params }: PageProps) {
-  const { id } = use(params);
+  const { id } = params;
   const [user, setUser] = useState<User | null>(null);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [loading, setLoading] = useState(true);
