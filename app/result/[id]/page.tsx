@@ -35,7 +35,11 @@ export default function ResultPage({ params }: PageProps) {
         
         // 測定データの取得
         const measurementsData = await getMeasurementsByUserId(id);
-        setMeasurements(measurementsData);
+        // 測定日で降順ソート
+        const sortedMeasurements = [...measurementsData].sort((a, b) => 
+          new Date(b.measurementDate).getTime() - new Date(a.measurementDate).getTime()
+        );
+        setMeasurements(sortedMeasurements);
       } catch (err) {
         setError('データの取得に失敗しました');
         console.error(err);

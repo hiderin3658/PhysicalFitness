@@ -5,10 +5,12 @@ interface User {
   gender: string;
   birthDate: string;
   medicalHistory: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface MeasurementFormData {
-  name: string;
+  userId: string;
   measurementDate: string;
   height: number | string;
   weight: number | string;
@@ -28,8 +30,9 @@ interface MeasurementFormData {
     best?: number;
   };
   cs10: number | string;
-  bi?: number | string;
+  bi: number | string;
   notes: string;
+  name?: string; // MeasurementFormコンポーネントの互換性のため
 }
 
 interface Measurement {
@@ -56,6 +59,8 @@ interface Measurement {
   cs10: number;
   bi: number;
   notes: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type { User, MeasurementFormData, Measurement };

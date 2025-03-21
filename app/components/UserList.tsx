@@ -12,11 +12,9 @@ interface UserListProps {
   users: User[];
 }
 
-export default function UserList({ users }: UserListProps) {
+export default function UserList({ users = [] }: UserListProps) {
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">ユーザー一覧</h1>
-      
       <div className="mb-4">
         <Link 
           href="/user/create" 

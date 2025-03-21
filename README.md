@@ -1,36 +1,91 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 体力測定アプリ
 
-## Getting Started
+体力測定の結果を記録・管理するためのウェブアプリケーションです。
 
-First, run the development server:
+## 技術スタック
 
+- **フロントエンド**: Next.js, React, TypeScript, Tailwind CSS
+- **バックエンド**: Next.js API Routes
+- **データベース**: Supabase
+- **認証**: Supabaseの認証機能
+
+## 環境構築
+
+1. リポジトリをクローン
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd physical_fitness_test
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. 依存関係をインストール
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. 環境変数の設定
+   - `.env.local.example`を`.env.local`にリネーム
+   - Supabaseの設定値を入力
+```
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. 開発サーバー起動
+```bash
+npm run dev
+```
 
-## Learn More
+## Supabaseのセットアップ
 
-To learn more about Next.js, take a look at the following resources:
+1. [Supabase](https://supabase.com/)でアカウント作成とプロジェクト作成
+2. 以下のテーブルを作成:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### usersテーブル
+- id (uuid, primary key)
+- lastName (text)
+- firstName (text)
+- gender (text)
+- birthDate (date)
+- medicalHistory (text[])
+- createdAt (timestamp with timezone)
+- updatedAt (timestamp with timezone)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### measurementsテーブル
+- id (uuid, primary key)
+- userId (uuid, foreign key)
+- measurementDate (date)
+- height (numeric)
+- weight (numeric)
+- tug (jsonb, 以下の構造)
+  - first (numeric)
+  - second (numeric)
+  - best (numeric)
+- walkingSpeed (jsonb, 以下の構造)
+  - first (numeric)
+  - second (numeric)
+  - best (numeric)
+- fr (jsonb, 以下の構造)
+  - first (numeric)
+  - second (numeric)
+  - best (numeric)
+- cs10 (numeric)
+- bi (numeric)
+- notes (text)
+- createdAt (timestamp with timezone)
+- updatedAt (timestamp with timezone)
 
-## Deploy on Vercel
+3. RLSポリシーの設定（必要に応じて）
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 機能一覧
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- ユーザー登録・管理
+- 体力測定データの登録
+- 測定結果の表示・分析
+- 過去データとの比較
+
+## コマンド
+
+- `npm run dev`: 開発サーバーの起動
+- `npm run build`: プロダクションビルド
+- `npm run start`: プロダクションサーバーの起動
+- `npm run lint`: コードの静的解析

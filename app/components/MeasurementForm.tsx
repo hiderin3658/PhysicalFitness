@@ -2,6 +2,9 @@
 
 import { useState, FormEvent } from 'react';
 import { MeasurementFormData } from '../lib/types';
+import { createMeasurement } from '../lib/db';
+import { useRouter } from 'next/navigation';
+import { userId } from '../lib/auth';
 
 interface MeasurementFormProps {
   onSubmit: (data: MeasurementFormData) => void;
@@ -51,36 +54,53 @@ export default function MeasurementForm({ onSubmit, initialData = {} }: Measurem
     }
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // 最良値の計算
     const processedData: MeasurementFormData = {
-      ...formData,
+      userId: userId, 
+      measurementDate: formData.measurementDate,
+      height: parseFloat(formData.height as string) || 0, 
+      weight: parseFloat(formData.weight as string) || 0, 
       tug: {
-        ...formData.tug,
+        first: parseFloat(formData.tug.first as string) || 0,
+        second: parseFloat(formData.tug.second as string) || 0,
         best: Math.min(
           parseFloat(formData.tug.first as string) || 0,
           parseFloat(formData.tug.second as string) || 0
         ),
       },
       walkingSpeed: {
-        ...formData.walkingSpeed,
+        first: parseFloat(formData.walkingSpeed.first as string) || 0,
+        second: parseFloat(formData.walkingSpeed.second as string) || 0,
         best: Math.min(
           parseFloat(formData.walkingSpeed.first as string) || 0,
           parseFloat(formData.walkingSpeed.second as string) || 0
         ),
       },
       fr: {
-        ...formData.fr,
+        first: parseFloat(formData.fr.first as string) || 0,
+        second: parseFloat(formData.fr.second as string) || 0,
         best: Math.max(
           parseFloat(formData.fr.first as string) || 0,
           parseFloat(formData.fr.second as string) || 0
         ),
       },
+      cs10: parseFloat(formData.cs10 as string) || 0, 
+      bi: parseFloat(formData.bi as string) || 0, 
+      notes: formData.notes, 
     };
-    
-    onSubmit(processedData);
+
+    try {
+      await createMeasurement(processedData);
+      alert('測定データが保存されました');
+      router.push(`/result/${userId}`);
+    } catch (error) {
+      console.error('測定データの保存に失敗しました', error);
+      alert('測定データの保存に失敗しました');
+    }
   };
 
   const handleClear = () => {

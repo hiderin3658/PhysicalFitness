@@ -55,8 +55,8 @@ export default function CreateUserPage() {
       await createUser(formData);
       router.push('/'); // ホームページにリダイレクト
     } catch (err) {
+      console.error('ユーザー作成エラー:', err);
       setError('ユーザーの作成に失敗しました');
-      console.error(err);
     } finally {
       setLoading(false);
     }
