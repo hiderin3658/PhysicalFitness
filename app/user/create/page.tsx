@@ -52,11 +52,31 @@ export default function CreateUserPage() {
     setError(null);
 
     try {
-      await createUser(formData);
+      console.log('フロントエンド: ユーザー作成開始', formData);
+      
+      // API経由でユーザーを作成
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+      
+      console.log('フロントエンド: APIレスポンスステータス:', response.status);
+      
+      const result = await response.json();
+      console.log('フロントエンド: APIレスポンス:', result);
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'ユーザー作成に失敗しました');
+      }
+      
+      console.log('フロントエンド: ユーザー作成成功:', result);
       router.push('/'); // ホームページにリダイレクト
     } catch (err) {
-      console.error('ユーザー作成エラー:', err);
-      setError('ユーザーの作成に失敗しました');
+      console.error('フロントエンド: ユーザー作成エラー:', err);
+      setError(`ユーザーの作成に失敗しました: ${err instanceof Error ? err.message : '不明なエラー'}`);
     } finally {
       setLoading(false);
     }

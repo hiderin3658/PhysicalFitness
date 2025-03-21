@@ -88,6 +88,8 @@ export const getUserById = async (id: string): Promise<User | null> => {
 };
 
 export const createUser = async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> => {
+  console.log('DB: createUser関数開始', JSON.stringify(userData));
+  
   // キー名の変換（キャメルケース→スネークケース）
   const dbUserData = {
     last_name: userData.lastName,
@@ -97,23 +99,38 @@ export const createUser = async (userData: Omit<User, 'id' | 'createdAt' | 'upda
     medical_history: userData.medicalHistory || []
   };
   
+  console.log('DB: Supabaseへ送信するデータ:', JSON.stringify(dbUserData));
+  console.log('DB: Supabase URL:', supabaseUrl);
+  console.log('DB: Supabase API Key:', supabaseKey ? '設定済み（非表示）' : '未設定');
+  
   try {
-    const { data, error } = await supabase
+    console.log('DB: Supabase insert操作開始');
+    
+    const { data, error, status } = await supabase
       .from('users')
       .insert([dbUserData])
       .select()
       .single();
     
+    console.log('DB: Supabase操作結果 - ステータス:', status);
+    
     if (error) {
-      console.error('ユーザーデータ挿入エラー:', error);
+      console.error('DB: ユーザーデータ挿入エラー:', error);
+      console.error('DB: エラーコード:', error.code);
+      console.error('DB: エラーメッセージ:', error.message);
+      console.error('DB: エラー詳細:', error.details);
+      console.error('DB: エラーヒント:', error.hint);
       throw error;
     }
     
+    console.log('DB: データベース応答:', JSON.stringify(data));
+    
     if (!data) {
+      console.error('DB: データなし');
       throw new Error('データ挿入に成功しましたが、レコードが返されませんでした');
     }
     
-    return {
+    const result = {
       id: data.id,
       lastName: data.last_name,
       firstName: data.first_name,
@@ -123,7 +140,15 @@ export const createUser = async (userData: Omit<User, 'id' | 'createdAt' | 'upda
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
+    
+    console.log('DB: 変換後の結果オブジェクト:', JSON.stringify(result));
+    return result;
   } catch (e) {
+    console.error('DB: 例外発生:', e);
+    if (e instanceof Error) {
+      console.error('DB: 例外メッセージ:', e.message);
+      console.error('DB: 例外スタック:', e.stack);
+    }
     throw e;
   }
 };
