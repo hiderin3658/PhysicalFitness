@@ -1,13 +1,21 @@
 import { getUsers } from './lib/db';
 import UserList from './components/UserList';
 
-// キャッシュを無効化（必要な場合のみ）
+// キャッシュを無効化し、常に最新データを取得
 export const revalidate = 0;
 export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 export default async function Home() {
   try {
+    console.log('ホームページ: ユーザーデータ取得開始');
     const users = await getUsers() || [];
+    console.log('ホームページ: 取得したユーザー数:', users.length);
+    
+    // デバッグ用にユーザーデータの最初の数件を表示
+    if (users.length > 0) {
+      console.log('ホームページ: 最初のユーザー例:', JSON.stringify(users.slice(0, 2)));
+    }
     
     return (
       <div className="container mx-auto py-8">

@@ -46,7 +46,10 @@ console.log('Admin認証クライアント有効:', adminAuthEnabled);
 // ユーザー関連の関数
 export const getUsers = async (): Promise<User[]> => {
   try {
-    const { data, error } = await supabase
+    console.log('DB: getUsers関数開始');
+    
+    // adminClientを使用してRLSをバイパス
+    const { data, error } = await adminClient
       .from('users')
       .select('*')
       .order('last_name', { ascending: true });
@@ -54,6 +57,8 @@ export const getUsers = async (): Promise<User[]> => {
     // データベースアクセスエラーの場合は通知
     if (error) {
       console.error('Supabaseからのデータ取得エラー:', error.message);
+      console.error('エラーコード:', error.code);
+      console.error('エラー詳細:', error.details);
       // ユーザー体験を優先して空の配列を返す（テーブルが存在しない場合など）
       return [];
     }

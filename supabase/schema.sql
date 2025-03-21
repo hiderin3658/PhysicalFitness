@@ -35,13 +35,13 @@ alter table public.measurements enable row level security;
 create policy "Anyone can read users"
   on public.users
   for select
-  to authenticated
+  to anon, authenticated
   using (true);
 
 create policy "Anyone can read measurements"
   on public.measurements
   for select
-  to authenticated
+  to anon, authenticated
   using (true);
 
 -- 権限のあるユーザーに書き込み権限を付与
