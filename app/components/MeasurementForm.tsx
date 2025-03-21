@@ -66,7 +66,7 @@ export default function MeasurementForm({ onSubmit, initialData = {} }: Measurem
       },
       walkingSpeed: {
         ...formData.walkingSpeed,
-        best: Math.max(
+        best: Math.min(
           parseFloat(formData.walkingSpeed.first as string) || 0,
           parseFloat(formData.walkingSpeed.second as string) || 0
         ),

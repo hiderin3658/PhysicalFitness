@@ -50,7 +50,6 @@ export default function ResultTable({ measurements, maxItems = 4 }: ResultTableP
     <div className="overflow-x-auto">
       <div className="bg-gray-200 p-2 mb-2 flex justify-between items-center">
         <h2 className="text-lg font-bold">評価結果</h2>
-        <p className="text-sm text-gray-600">※TUGは数値が下がると改善</p>
       </div>
       <table className="min-w-full border-collapse border border-gray-300">
         <thead>

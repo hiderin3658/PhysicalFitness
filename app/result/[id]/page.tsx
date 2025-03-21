@@ -63,10 +63,7 @@ export default function ResultPage({ params }: PageProps) {
 
   return (
     <div className="container mx-auto py-8">
-      <h1 className="text-2xl font-bold mb-6">
-        {user?.lastName} {user?.firstName}さんの評価結果
-      </h1>
-      
+     
       {/* ユーザー基本情報 */}
       <UserInfoDisplay userInfo={user} />
       
