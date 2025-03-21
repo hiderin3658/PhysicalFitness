@@ -2,12 +2,13 @@
 import { createClient } from '@supabase/supabase-js';
 import { User, Measurement, MeasurementFormData } from './types';
 
-// 環境変数のチェック
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// 環境変数の設定（デフォルト値付き）
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy-key';
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('環境変数が設定されていません。.env.localファイルを確認してください。');
+// 環境変数が設定されていない場合は警告ログを出力
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  console.warn('Supabase環境変数が設定されていません。Vercelダッシュボードで環境変数を設定してください。');
 }
 
 // Supabaseクライアントの初期化

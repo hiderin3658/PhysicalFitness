@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserById, updateUser, deleteUser } from '../../../lib/db';
 
+// ビルド時の静的生成をスキップするための設定
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: {
     id: string;

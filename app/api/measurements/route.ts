@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createMeasurement, getMeasurements } from '../../lib/db';
 
+// ビルド時の静的生成をスキップするための設定
+export const dynamic = 'force-dynamic';
+
 // 測定データ一覧の取得
 export async function GET() {
   try {

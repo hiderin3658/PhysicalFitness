@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMeasurementById, updateMeasurement, deleteMeasurement } from '@/app/lib/db';
 
+// 設定時にビルドをスキップするための静的なパラメータ定義
+export const dynamic = 'force-dynamic';
+
 // 特定の測定データの取得
-export async function GET(request: NextRequest, context: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id } = context.params;
+    const id = params.id;
     const measurement = await getMeasurementById(id);
     
     if (!measurement) {
@@ -25,9 +28,9 @@ export async function GET(request: NextRequest, context: { params: { id: string 
 }
 
 // 測定データの更新
-export async function PUT(request: NextRequest, context: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id } = context.params;
+    const id = params.id;
     const data = await request.json();
     
     if (!data) {
@@ -57,9 +60,9 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
 }
 
 // 測定データの削除
-export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id } = context.params;
+    const id = params.id;
     
     const measurement = await getMeasurementById(id);
     if (!measurement) {

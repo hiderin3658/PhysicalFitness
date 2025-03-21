@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUsers, createUser } from '../../lib/db';
 
+// ビルド時の静的生成をスキップするための設定
+export const dynamic = 'force-dynamic';
+
 // ユーザー一覧の取得
 export async function GET() {
   try {
