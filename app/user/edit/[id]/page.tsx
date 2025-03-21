@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getUserById, updateUser } from '../../../lib/db';
 
 interface PageProps {
   params: {
@@ -35,19 +34,29 @@ export default function EditUserPage({ params }: PageProps) {
     const fetchUser = async () => {
       try {
         console.log('編集ページ: ユーザーデータ取得開始 - ID:', id);
-        const userData = await getUserById(id);
         
-        if (!userData) {
+        // APIで直接ユーザーデータを取得
+        const response = await fetch(`/api/users/${id}`);
+        console.log('編集ページ: APIレスポンスステータス:', response.status);
+        
+        const data = await response.json();
+        console.log('編集ページ: APIレスポンス:', data);
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'ユーザーの取得に失敗しました');
+        }
+        
+        if (!data) {
           console.error('編集ページ: ユーザーが見つかりません - ID:', id);
           setError('ユーザーが見つかりません');
         } else {
-          console.log('編集ページ: ユーザーデータ取得成功:', userData);
+          console.log('編集ページ: ユーザーデータ取得成功:', data);
           setFormData({
-            lastName: userData.lastName,
-            firstName: userData.firstName,
-            gender: userData.gender,
-            birthDate: userData.birthDate,
-            medicalHistory: userData.medicalHistory || [],
+            lastName: data.lastName,
+            firstName: data.firstName,
+            gender: data.gender,
+            birthDate: data.birthDate,
+            medicalHistory: data.medicalHistory || [],
           });
           console.log('編集ページ: フォームデータを設定しました');
         }
