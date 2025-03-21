@@ -34,10 +34,14 @@ export default function EditUserPage({ params }: PageProps) {
   useEffect(() => {
     const fetchUser = async () => {
       try {
+        console.log('編集ページ: ユーザーデータ取得開始 - ID:', id);
         const userData = await getUserById(id);
+        
         if (!userData) {
+          console.error('編集ページ: ユーザーが見つかりません - ID:', id);
           setError('ユーザーが見つかりません');
         } else {
+          console.log('編集ページ: ユーザーデータ取得成功:', userData);
           setFormData({
             lastName: userData.lastName,
             firstName: userData.firstName,
@@ -45,10 +49,15 @@ export default function EditUserPage({ params }: PageProps) {
             birthDate: userData.birthDate,
             medicalHistory: userData.medicalHistory || [],
           });
+          console.log('編集ページ: フォームデータを設定しました');
         }
       } catch (err) {
-        setError('ユーザー情報の取得に失敗しました');
-        console.error(err);
+        console.error('編集ページ: ユーザー情報取得エラー:', err);
+        if (err instanceof Error) {
+          setError(`ユーザー情報の取得に失敗しました: ${err.message}`);
+        } else {
+          setError('ユーザー情報の取得に失敗しました');
+        }
       } finally {
         setLoading(false);
       }
@@ -87,11 +96,35 @@ export default function EditUserPage({ params }: PageProps) {
     setError(null);
 
     try {
-      await updateUser(id, formData);
+      console.log('編集ページ: ユーザー更新開始 - ID:', id, 'データ:', formData);
+      
+      // API経由での更新
+      const response = await fetch(`/api/users/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+      
+      console.log('編集ページ: APIレスポンスステータス:', response.status);
+      
+      const result = await response.json();
+      console.log('編集ページ: APIレスポンス:', result);
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'ユーザー更新に失敗しました');
+      }
+      
+      console.log('編集ページ: ユーザー更新成功');
       router.push('/'); // ホームページにリダイレクト
     } catch (err) {
-      setError('ユーザー情報の更新に失敗しました');
-      console.error(err);
+      console.error('編集ページ: 更新エラー:', err);
+      if (err instanceof Error) {
+        setError(`ユーザー情報の更新に失敗しました: ${err.message}`);
+      } else {
+        setError('ユーザー情報の更新に失敗しました');
+      }
     } finally {
       setSaving(false);
     }

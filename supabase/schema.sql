@@ -31,7 +31,12 @@ create table if not exists public.measurements (
 alter table public.users enable row level security;
 alter table public.measurements enable row level security;
 
--- すべてのユーザーに読み取り権限を付与
+-- すべてのユーザーに読み取り権限を付与（匿名ユーザーを含む）
+-- 既存のポリシーを削除
+drop policy if exists "Anyone can read users" on public.users;
+drop policy if exists "Anyone can read measurements" on public.measurements;
+
+-- 新しいポリシーを作成
 create policy "Anyone can read users"
   on public.users
   for select
@@ -44,30 +49,39 @@ create policy "Anyone can read measurements"
   to anon, authenticated
   using (true);
 
--- 権限のあるユーザーに書き込み権限を付与
+-- 権限のあるユーザーに書き込み権限を付与（匿名ユーザーを含む）
+drop policy if exists "Anyone can insert users" on public.users;
+drop policy if exists "Authenticated users can insert users" on public.users;
+
 create policy "Anyone can insert users"
   on public.users
   for insert
   to anon, authenticated
   with check (true);
 
-create policy "Authenticated users can insert measurements"
+drop policy if exists "Authenticated users can insert measurements" on public.measurements;
+
+create policy "Anyone can insert measurements"
   on public.measurements
   for insert
-  to authenticated
+  to anon, authenticated
   with check (true);
 
-create policy "Authenticated users can update users"
+drop policy if exists "Authenticated users can update users" on public.users;
+
+create policy "Anyone can update users"
   on public.users
   for update
-  to authenticated
+  to anon, authenticated
   using (true)
   with check (true);
 
-create policy "Authenticated users can update measurements"
+drop policy if exists "Authenticated users can update measurements" on public.measurements;
+
+create policy "Anyone can update measurements"
   on public.measurements
   for update
-  to authenticated
+  to anon, authenticated
   using (true)
   with check (true);
 

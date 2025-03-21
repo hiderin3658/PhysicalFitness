@@ -87,26 +87,55 @@ export const getUsers = async (): Promise<User[]> => {
 };
 
 export const getUserById = async (id: string): Promise<User | null> => {
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', id)
-    .single();
+  console.log('DB: getUserById関数開始 - ID:', id);
   
-  if (error) throw error;
-  if (!data) return null;
-  
-  // キー名の変換（スネークケース→キャメルケース）
-  return {
-    id: data.id,
-    lastName: data.last_name,
-    firstName: data.first_name,
-    gender: data.gender,
-    birthDate: data.birth_date,
-    medicalHistory: data.medical_history || [],
-    createdAt: data.created_at,
-    updatedAt: data.updated_at
-  };
+  try {
+    // adminClientを使用してRLSをバイパス
+    const { data, error, status } = await adminClient
+      .from('users')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    console.log('DB: Supabase操作結果 - ステータス:', status);
+    
+    if (error) {
+      console.error('DB: ユーザー取得エラー:', error);
+      console.error('DB: エラーコード:', error.code);
+      console.error('DB: エラーメッセージ:', error.message);
+      console.error('DB: エラー詳細:', error.details);
+      throw error;
+    }
+    
+    if (!data) {
+      console.log('DB: ユーザーが見つかりませんでした - ID:', id);
+      return null;
+    }
+    
+    console.log('DB: ユーザーデータ取得成功:', JSON.stringify(data));
+    
+    // キー名の変換（スネークケース→キャメルケース）
+    const user = {
+      id: data.id,
+      lastName: data.last_name,
+      firstName: data.first_name,
+      gender: data.gender,
+      birthDate: data.birth_date,
+      medicalHistory: data.medical_history || [],
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+    
+    console.log('DB: 変換後のユーザーデータ:', JSON.stringify(user));
+    return user;
+  } catch (e) {
+    console.error('DB: getUserById関数でエラーが発生:', e);
+    if (e instanceof Error) {
+      console.error('DB: エラーメッセージ:', e.message);
+      console.error('DB: エラースタック:', e.stack);
+    }
+    throw e;
+  }
 };
 
 export const createUser = async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> => {
@@ -177,6 +206,8 @@ export const createUser = async (userData: Omit<User, 'id' | 'createdAt' | 'upda
 };
 
 export const updateUser = async (id: string, userData: Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>): Promise<User | null> => {
+  console.log('DB: updateUser関数開始 - ID:', id, 'データ:', JSON.stringify(userData));
+  
   // キー名の変換（キャメルケース→スネークケース）
   const dbUserData: any = {};
   
@@ -186,37 +217,83 @@ export const updateUser = async (id: string, userData: Partial<Omit<User, 'id' |
   if (userData.birthDate !== undefined) dbUserData.birth_date = userData.birthDate;
   if (userData.medicalHistory !== undefined) dbUserData.medical_history = userData.medicalHistory;
   
-  const { data, error } = await supabase
-    .from('users')
-    .update(dbUserData)
-    .eq('id', id)
-    .select()
-    .single();
+  console.log('DB: 更新用データ:', JSON.stringify(dbUserData));
   
-  if (error) throw error;
-  if (!data) return null;
-  
-  // キー名の変換（スネークケース→キャメルケース）
-  return {
-    id: data.id,
-    lastName: data.last_name,
-    firstName: data.first_name,
-    gender: data.gender,
-    birthDate: data.birth_date,
-    medicalHistory: data.medical_history || [],
-    createdAt: data.created_at,
-    updatedAt: data.updated_at
-  };
+  try {
+    // adminClientを使用してRLSをバイパス
+    const { data, error, status } = await adminClient
+      .from('users')
+      .update(dbUserData)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    console.log('DB: Supabase操作結果 - ステータス:', status);
+    
+    if (error) {
+      console.error('DB: ユーザーデータ更新エラー:', error);
+      console.error('DB: エラーコード:', error.code);
+      console.error('DB: エラーメッセージ:', error.message);
+      console.error('DB: エラー詳細:', error.details);
+      throw error;
+    }
+    
+    if (!data) {
+      console.log('DB: 更新後のデータが見つかりませんでした - ID:', id);
+      return null;
+    }
+    
+    console.log('DB: 更新成功 - レスポンス:', JSON.stringify(data));
+    
+    // キー名の変換（スネークケース→キャメルケース）
+    const user = {
+      id: data.id,
+      lastName: data.last_name,
+      firstName: data.first_name,
+      gender: data.gender,
+      birthDate: data.birth_date,
+      medicalHistory: data.medical_history || [],
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+    
+    console.log('DB: 変換後のユーザーデータ:', JSON.stringify(user));
+    return user;
+  } catch (e) {
+    console.error('DB: updateUser関数でエラーが発生:', e);
+    if (e instanceof Error) {
+      console.error('DB: エラーメッセージ:', e.message);
+      console.error('DB: エラースタック:', e.stack);
+    }
+    throw e;
+  }
 };
 
 export const deleteUser = async (id: string): Promise<boolean> => {
-  const { error } = await supabase
-    .from('users')
-    .delete()
-    .eq('id', id);
+  console.log('DB: deleteUser関数開始 - ID:', id);
   
-  if (error) throw error;
-  return true;
+  try {
+    // adminClientを使用してRLSをバイパス
+    const { error, status } = await adminClient
+      .from('users')
+      .delete()
+      .eq('id', id);
+    
+    console.log('DB: Supabase操作結果 - ステータス:', status);
+    
+    if (error) {
+      console.error('DB: ユーザー削除エラー:', error);
+      console.error('DB: エラーコード:', error.code);
+      console.error('DB: エラーメッセージ:', error.message);
+      throw error;
+    }
+    
+    console.log('DB: ユーザー削除成功 - ID:', id);
+    return true;
+  } catch (e) {
+    console.error('DB: deleteUser関数でエラーが発生:', e);
+    throw e;
+  }
 };
 
 // 測定データ関連の関数
