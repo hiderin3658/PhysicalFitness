@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMeasurementsByUserId, getLatestMeasurementsByUserId } from '../../../../lib/db';
+// getMeasurementsByUserIdをインポートしない
+// import { getMeasurementsByUserId, getLatestMeasurementsByUserId } from '../../../../lib/db';
+// adminClientを直接インポート
+import { adminClient } from '../../../../lib/db';
 
 // ビルド時の静的生成をスキップするための設定
 export const dynamic = 'force-dynamic';
@@ -26,16 +29,60 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       // 最新の測定データを取得（デフォルトで4件）
       const limit = parseInt(searchParams.get('limit') || '4');
       console.log(`API: 最新${limit}件の測定データを取得します`);
-      measurements = await getLatestMeasurementsByUserId(id, limit);
+      
+      // adminClientを直接使用して最新データを取得
+      const { data, error } = await adminClient
+        .from('measurements')
+        .select('id, measurement_date, height, weight, tug, walking_speed, fr, cs10, bi, user_id, created_at, updated_at')
+        .eq('user_id', id)
+        .order('measurement_date', { ascending: false })
+        .limit(limit);
+        
+      if (error) {
+        console.error('API: 最新測定データ取得エラー:', error);
+        throw error;
+      }
+      
+      measurements = data || [];
     } else {
       // すべての測定データを取得
       console.log(`API: すべての測定データを取得します`);
-      measurements = await getMeasurementsByUserId(id);
+      
+      // adminClientを直接使用してすべてのデータを取得
+      const { data, error } = await adminClient
+        .from('measurements')
+        .select('id, measurement_date, height, weight, tug, walking_speed, fr, cs10, bi, user_id, created_at, updated_at')
+        .eq('user_id', id)
+        .order('measurement_date', { ascending: false });
+        
+      if (error) {
+        console.error('API: 測定データ取得エラー:', error);
+        throw error;
+      }
+      
+      measurements = data || [];
     }
     
+    // キー名の変換（スネークケース→キャメルケース）
+    const formattedMeasurements = measurements.map((item: any) => ({
+      id: item.id,
+      userId: item.user_id,
+      measurementDate: item.measurement_date,
+      height: item.height,
+      weight: item.weight,
+      tug: item.tug,
+      walkingSpeed: item.walking_speed,
+      fr: item.fr,
+      cs10: item.cs10,
+      bi: item.bi !== null && item.bi !== undefined ? item.bi : 0,
+      notes: item.notes,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at
+    }));
+    
     // 測定データのBI値をログ出力
-    if (Array.isArray(measurements)) {
-      measurements.forEach(measurement => {
+    if (Array.isArray(formattedMeasurements)) {
+      formattedMeasurements.forEach(measurement => {
         console.log(`API: 測定ID: ${measurement.id}, BI値: ${measurement.bi}, 日付: ${measurement.measurementDate}`);
         // 他の重要なフィールドもログ出力
         const walkingSpeedText = typeof measurement.walkingSpeed === 'object' 
@@ -48,10 +95,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       });
     }
     
-    console.log(`API: ${measurements.length}件の測定データを返します (${new Date().toISOString()})`);
+    console.log(`API: ${formattedMeasurements.length}件の測定データを返します (${new Date().toISOString()})`);
     
     // キャッシュを確実に無効化するためのヘッダーを追加
-    return new NextResponse(JSON.stringify(measurements), {
+    return new NextResponse(JSON.stringify(formattedMeasurements), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',

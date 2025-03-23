@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserById, updateUser, deleteUser } from '../../../lib/db';
+// DBヘルパー関数の代わりにadminClientを直接インポート
+// import { getUserById, updateUser, deleteUser } from '../../../lib/db';
+import { adminClient } from '../../../lib/db';
 
 // ビルド時の静的生成をスキップするための設定
 export const dynamic = 'force-dynamic';
@@ -17,10 +19,23 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     console.log('APIルート: GET /api/users/[id] - ID:', id);
     
     try {
-      const user = await getUserById(id);
-      console.log('APIルート: getUserById結果:', user ? 'ユーザー取得成功' : 'ユーザーなし');
+      // adminClientを直接使用してユーザー情報を取得
+      const { data, error, status } = await adminClient
+        .from('users')
+        .select('*')
+        .eq('id', id)
+        .single();
       
-      if (!user) {
+      console.log('APIルート: Supabase操作結果 - ステータス:', status);
+      
+      if (error) {
+        console.error('APIルート: ユーザー取得エラー:', error);
+        console.error('APIルート: エラーコード:', error.code);
+        console.error('APIルート: エラーメッセージ:', error.message);
+        throw error;
+      }
+      
+      if (!data) {
         console.log('APIルート: ユーザーが見つかりません - ID:', id);
         return NextResponse.json(
           { error: 'ユーザーが見つかりません' },
@@ -28,10 +43,22 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         );
       }
       
+      // キー名の変換（スネークケース→キャメルケース）
+      const user = {
+        id: data.id,
+        lastName: data.last_name,
+        firstName: data.first_name,
+        gender: data.gender,
+        birthDate: data.birth_date,
+        medicalHistory: data.medical_history || [],
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      };
+      
       console.log('APIルート: ユーザーデータ応答準備完了');
       return NextResponse.json(user);
     } catch (dbError) {
-      console.error('APIルート: getUserById関数からのエラー:', dbError);
+      console.error('APIルート: ユーザー取得中のエラー:', dbError);
       if (dbError instanceof Error) {
         console.error('APIルート: エラーメッセージ:', dbError.message);
         console.error('APIルート: エラースタック:', dbError.stack);
@@ -72,8 +99,19 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     
     // ユーザーの存在確認
     try {
-      const user = await getUserById(id);
-      if (!user) {
+      // adminClientを直接使用してユーザー存在を確認
+      const { data: existingUser, error: checkError } = await adminClient
+        .from('users')
+        .select('id')
+        .eq('id', id)
+        .single();
+      
+      if (checkError) {
+        console.error('APIルート: ユーザー存在確認エラー:', checkError);
+        throw checkError;
+      }
+      
+      if (!existingUser) {
         console.log('APIルート: 更新対象ユーザーが見つかりません - ID:', id);
         return NextResponse.json(
           { error: 'ユーザーが見つかりません' },
@@ -88,19 +126,54 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     
     // ユーザーの更新
     try {
-      console.log('APIルート: updateUser呼び出し開始');
-      const updatedUser = await updateUser(id, {
-        lastName: data.lastName,
-        firstName: data.firstName,
-        gender: data.gender,
-        birthDate: data.birthDate,
-        medicalHistory: data.medicalHistory,
-      });
+      console.log('APIルート: ユーザー更新処理開始');
       
-      console.log('APIルート: ユーザー更新成功:', updatedUser ? 'データあり' : 'データなし');
+      // キー名の変換（キャメルケース→スネークケース）
+      const dbUserData: any = {};
+      
+      if (data.lastName !== undefined) dbUserData.last_name = data.lastName;
+      if (data.firstName !== undefined) dbUserData.first_name = data.firstName;
+      if (data.gender !== undefined) dbUserData.gender = data.gender;
+      if (data.birthDate !== undefined) dbUserData.birth_date = data.birthDate;
+      if (data.medicalHistory !== undefined) dbUserData.medical_history = data.medicalHistory;
+      
+      // adminClientを直接使用してユーザー更新
+      const { data: updateData, error: updateError } = await adminClient
+        .from('users')
+        .update(dbUserData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (updateError) {
+        console.error('APIルート: ユーザー更新エラー:', updateError);
+        throw updateError;
+      }
+      
+      if (!updateData) {
+        console.log('APIルート: 更新後のデータが見つかりませんでした - ID:', id);
+        return NextResponse.json(
+          { error: 'ユーザー更新後のデータが取得できませんでした' },
+          { status: 500 }
+        );
+      }
+      
+      // キー名の変換（スネークケース→キャメルケース）
+      const updatedUser = {
+        id: updateData.id,
+        lastName: updateData.last_name,
+        firstName: updateData.first_name,
+        gender: updateData.gender,
+        birthDate: updateData.birth_date,
+        medicalHistory: updateData.medical_history || [],
+        createdAt: updateData.created_at,
+        updatedAt: updateData.updated_at
+      };
+      
+      console.log('APIルート: ユーザー更新成功:', JSON.stringify(updatedUser));
       return NextResponse.json(updatedUser);
     } catch (updateError) {
-      console.error('APIルート: updateUser関数からのエラー:', updateError);
+      console.error('APIルート: ユーザー更新中のエラー:', updateError);
       if (updateError instanceof Error) {
         console.error('APIルート: エラーメッセージ:', updateError.message);
         console.error('APIルート: エラースタック:', updateError.stack);
@@ -129,8 +202,19 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     
     // ユーザーの存在確認
     try {
-      const user = await getUserById(id);
-      if (!user) {
+      // adminClientを直接使用してユーザー存在を確認
+      const { data: existingUser, error: checkError } = await adminClient
+        .from('users')
+        .select('id')
+        .eq('id', id)
+        .single();
+      
+      if (checkError) {
+        console.error('APIルート: ユーザー存在確認エラー:', checkError);
+        throw checkError;
+      }
+      
+      if (!existingUser) {
         console.log('APIルート: 削除対象ユーザーが見つかりません - ID:', id);
         return NextResponse.json(
           { error: 'ユーザーが見つかりません' },
@@ -145,20 +229,25 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     
     // ユーザーの削除
     try {
-      console.log('APIルート: deleteUser呼び出し開始');
-      const success = await deleteUser(id);
+      console.log('APIルート: ユーザー削除処理開始');
       
-      console.log('APIルート: 削除結果:', success ? '成功' : '失敗');
-      if (success) {
-        return new NextResponse(null, { status: 204 });
-      } else {
-        return NextResponse.json(
-          { error: 'ユーザーの削除に失敗しました' },
-          { status: 500 }
-        );
+      // adminClientを直接使用してユーザー削除
+      const { error: deleteError, status } = await adminClient
+        .from('users')
+        .delete()
+        .eq('id', id);
+      
+      console.log('APIルート: Supabase操作結果 - ステータス:', status);
+      
+      if (deleteError) {
+        console.error('APIルート: ユーザー削除エラー:', deleteError);
+        throw deleteError;
       }
+      
+      console.log('APIルート: ユーザー削除成功 - ID:', id);
+      return new NextResponse(null, { status: 204 });
     } catch (deleteError) {
-      console.error('APIルート: deleteUser関数からのエラー:', deleteError);
+      console.error('APIルート: ユーザー削除中のエラー:', deleteError);
       if (deleteError instanceof Error) {
         console.error('APIルート: エラーメッセージ:', deleteError.message);
         console.error('APIルート: エラースタック:', deleteError.stack);

@@ -69,6 +69,9 @@ console.log('DB接続情報 - Supabase URL:', supabaseUrl);
 
 // Supabaseクライアントの初期化完了
 
+// adminClientをエクスポートする
+export { adminClient };
+
 // ユーザー関連の関数
 export const getUsers = async (): Promise<User[]> => {
   try {

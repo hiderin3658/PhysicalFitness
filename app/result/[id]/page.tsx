@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getUserById, getMeasurementsByUserId } from '../../lib/db';
+// getUserByIdのインポートを削除
+// import { getUserById, getMeasurementsByUserId } from '../../lib/db';
 import UserInfoDisplay from '../../components/UserInfoDisplay';
 import ResultTable from '../../components/ResultTable';
 import ResultChart from '../../components/ResultChart';
@@ -19,6 +20,53 @@ export default function ResultPage({ params }: PageProps) {
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // ユーザー情報を取得する関数
+  const fetchUser = useCallback(async () => {
+    try {
+      console.log(`ResultPage: ユーザーID: ${id}のユーザー情報を取得します`);
+      
+      // APIルートを使用してユーザー情報を取得
+      const timestamp = Date.now();
+      const response = await fetch(`/api/users/${id}?t=${timestamp}`, {
+        method: 'GET',
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      
+      if (!response.ok) {
+        console.error('ResultPage: API応答エラー (ユーザー取得):', response.status, response.statusText);
+        let errorMessage = 'ユーザー情報の取得に失敗しました';
+        
+        try {
+          const errorData = await response.json();
+          if (errorData && errorData.error) {
+            errorMessage = `${errorMessage}: ${errorData.error}`;
+          }
+        } catch (e) {
+          console.error('ResultPage: エラーレスポンスの解析に失敗:', e);
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      const userData = await response.json();
+      console.log('ResultPage: 取得したユーザーデータ:', userData);
+      
+      if (!userData || !userData.id) {
+        throw new Error('ユーザー情報が見つかりません');
+      }
+      
+      return userData;
+    } catch (err) {
+      console.error('ResultPage: ユーザー情報取得エラー:', err);
+      throw err;
+    }
+  }, [id]);
 
   // 測定データを取得する関数
   const fetchMeasurements = useCallback(async () => {
@@ -38,7 +86,7 @@ export default function ResultPage({ params }: PageProps) {
       });
       
       if (!response.ok) {
-        console.error('ResultPage: API応答エラー:', response.status, response.statusText);
+        console.error('ResultPage: API応答エラー (測定データ取得):', response.status, response.statusText);
         let errorMessage = '測定データの取得に失敗しました';
         
         try {
@@ -89,28 +137,22 @@ export default function ResultPage({ params }: PageProps) {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // ユーザー情報の取得
-        const userData = await getUserById(id);
-        if (!userData) {
-          setError('ユーザーが見つかりません');
-          setLoading(false);
-          return;
-        }
-        
+        // ユーザー情報の取得 - APIルートを使用
+        const userData = await fetchUser();
         setUser(userData);
         
         // 測定データの取得
         await fetchMeasurements();
       } catch (err) {
-        setError('データの取得に失敗しました');
-        console.error(err);
+        console.error('ResultPage: データ取得エラー:', err);
+        setError(err instanceof Error ? err.message : 'データの取得に失敗しました');
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [id, fetchMeasurements]);
+  }, [id, fetchUser, fetchMeasurements]);
 
   // BI値が更新されたときのハンドラ
   const handleBiValueUpdate = useCallback((measurementId: string, newBiValue: number) => {
