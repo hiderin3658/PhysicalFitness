@@ -2,7 +2,6 @@
 
 import { useState, FormEvent } from 'react';
 import { MeasurementFormData } from '../lib/types';
-import { createMeasurement } from '../lib/db';
 import { useRouter } from 'next/navigation';
 import { userId } from '../lib/auth';
 
@@ -106,10 +105,26 @@ export default function MeasurementForm({ onSubmit, initialData = {}, selectedUs
       };
 
       console.log('送信データ:', JSON.stringify(processedData));
-      console.log('データベースへの保存処理開始...');
+      console.log('APIを通じてデータベースへ保存処理開始...');
 
       try {
-        const result = await createMeasurement(processedData);
+        // API ルートを使用してデータを保存します
+        const response = await fetch('/api/measurements', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(processedData),
+        });
+
+        if (!response.ok) {
+          // エラーレスポンスを処理
+          const errorData = await response.json();
+          throw new Error(errorData.error || '測定データの保存に失敗しました');
+        }
+
+        // 成功レスポンスを処理
+        const result = await response.json();
         console.log('保存成功:', JSON.stringify(result));
         window.alert('測定データを保存しました');
         router.push(`/result/${selectedUser?.id || userId}`);
@@ -123,34 +138,6 @@ export default function MeasurementForm({ onSubmit, initialData = {}, selectedUs
           // エラーメッセージを直接使用
           errorMessage = error.message || errorMessage;
           console.error('エラー詳細:', error.stack);
-        }
-        
-        // Supabaseの接続エラーかどうかをチェック
-        if (typeof error === 'object' && error !== null && 'code' in error) {
-          const supabaseError = error as { code: string; message: string; details?: string };
-          
-          if (supabaseError.code === 'PGRST301' || supabaseError.code === '22P02') {
-            errorMessage = 'データ形式が不正です。入力値を確認してください。';
-          } else if (supabaseError.code === '23505') {
-            errorMessage = '同じ日付のデータがすでに存在します。別の日付を選択してください。';
-          } else if (supabaseError.code === '42501') {
-            errorMessage = 'データベースの権限が不足しています。環境変数の設定を確認してください。';
-            console.error('RLS権限エラー - SUPABASE_SERVICE_ROLE_KEYの設定を確認してください');
-          } else if (supabaseError.code === '42P01') {
-            errorMessage = 'テーブルが存在しません。データベーススキーマを確認してください。';
-          } else if (supabaseError.code === '503' || supabaseError.code === '500') {
-            errorMessage = 'データベースサービスに接続できません。ネットワーク接続を確認してください。';
-          } else if (supabaseError.code === '23502') {
-            errorMessage = '必須項目が入力されていません。入力内容を確認してください。';
-          } else if (supabaseError.code === '23514') {
-            errorMessage = '入力値が制約に違反しています。入力内容を確認してください。';
-          }
-          
-          console.error('Supabaseエラー:', {
-            code: supabaseError.code,
-            message: supabaseError.message,
-            details: supabaseError.details
-          });
         }
         
         // より詳細なエラーメッセージを表示
