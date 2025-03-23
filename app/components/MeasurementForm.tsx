@@ -68,6 +68,7 @@ export default function MeasurementForm({ onSubmit, initialData = {}, selectedUs
     setIsSubmitting(true);
     
     console.log('フォームSubmit開始');
+    console.log('測定日:', formData.measurementDate);
 
     try {
       // 送信データの準備
@@ -105,7 +106,7 @@ export default function MeasurementForm({ onSubmit, initialData = {}, selectedUs
       };
 
       console.log('送信データ:', JSON.stringify(processedData));
-      console.log('保存処理開始...');
+      console.log('データベースへの保存処理開始...');
 
       try {
         const result = await createMeasurement(processedData);
@@ -119,7 +120,8 @@ export default function MeasurementForm({ onSubmit, initialData = {}, selectedUs
         let errorMessage = '測定データの保存に失敗しました。';
         
         if (error instanceof Error) {
-          errorMessage += ` ${error.message}`;
+          // エラーメッセージを直接使用
+          errorMessage = error.message || errorMessage;
           console.error('エラー詳細:', error.stack);
         }
         
@@ -130,11 +132,18 @@ export default function MeasurementForm({ onSubmit, initialData = {}, selectedUs
           if (supabaseError.code === 'PGRST301' || supabaseError.code === '22P02') {
             errorMessage = 'データ形式が不正です。入力値を確認してください。';
           } else if (supabaseError.code === '23505') {
-            errorMessage = '同じ日付のデータがすでに存在します。';
+            errorMessage = '同じ日付のデータがすでに存在します。別の日付を選択してください。';
           } else if (supabaseError.code === '42501') {
-            errorMessage = 'データベースの権限が不足しています。管理者に連絡してください。';
+            errorMessage = 'データベースの権限が不足しています。環境変数の設定を確認してください。';
+            console.error('RLS権限エラー - SUPABASE_SERVICE_ROLE_KEYの設定を確認してください');
+          } else if (supabaseError.code === '42P01') {
+            errorMessage = 'テーブルが存在しません。データベーススキーマを確認してください。';
           } else if (supabaseError.code === '503' || supabaseError.code === '500') {
             errorMessage = 'データベースサービスに接続できません。ネットワーク接続を確認してください。';
+          } else if (supabaseError.code === '23502') {
+            errorMessage = '必須項目が入力されていません。入力内容を確認してください。';
+          } else if (supabaseError.code === '23514') {
+            errorMessage = '入力値が制約に違反しています。入力内容を確認してください。';
           }
           
           console.error('Supabaseエラー:', {
@@ -144,11 +153,12 @@ export default function MeasurementForm({ onSubmit, initialData = {}, selectedUs
           });
         }
         
-        window.alert(errorMessage);
+        // より詳細なエラーメッセージを表示
+        window.alert(`エラー: ${errorMessage}`);
       }
     } catch (error) {
       console.error('フォーム処理エラー:', error);
-      window.alert('予期せぬエラーが発生しました。');
+      window.alert('予期せぬエラーが発生しました。入力内容を確認してください。');
     } finally {
       setIsSubmitting(false);
     }

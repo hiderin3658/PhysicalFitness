@@ -12,10 +12,15 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // 環境変数が設定されていない場合は警告ログを出力
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
   console.warn('Supabase環境変数が設定されていません。Vercelダッシュボードで環境変数を設定してください。');
+  console.warn('NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? '設定あり' : '未設定');
+  console.warn('NEXT_PUBLIC_SUPABASE_ANON_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '設定あり' : '未設定');
 }
 
 if (!supabaseServiceKey) {
   console.warn('SUPABASE_SERVICE_ROLE_KEYが設定されていません。RLSをバイパスするにはこの設定が必要です。');
+  console.warn('Vercelダッシュボードで環境変数 SUPABASE_SERVICE_ROLE_KEY を設定してください。');
+} else {
+  console.log('SUPABASE_SERVICE_ROLE_KEY: 設定あり (長さ:', supabaseServiceKey.length, '文字)');
 }
 
 // クライアント側で使用するSupabaseクライアント
@@ -38,6 +43,8 @@ const adminAuthEnabled = !!supabaseServiceKey;
 // adminClientを明示的に作成し、サービスロールキーがない場合は警告を出力
 let adminClient: SupabaseClient;
 if (adminAuthEnabled) {
+  // サービスロールが利用可能な場合はRLSをバイパスするクライアントを作成
+  console.log('サービスロールキーが設定されています。RLSをバイパスします。');
   adminClient = createClient(supabaseUrl, supabaseServiceKey!, {
     auth: {
       autoRefreshToken: false,
@@ -51,11 +58,14 @@ if (adminAuthEnabled) {
   });
   console.log('Adminクライアントを作成しました。RLSをバイパスできます。');
 } else {
+  // サービスロールキーがない場合は通常のクライアントを使用
   adminClient = supabase; // フォールバックとして通常のクライアントを使用
-  console.warn('サービスロールキーが設定されていないため、通常のクライアントをadminClientとして使用します。RLSはバイパスされません。');
+  console.warn('サービスロールキーが設定されていないため、通常のクライアントをadminClientとして使用します。');
+  console.warn('この場合、RLSはバイパスされず、権限エラーが発生する可能性があります。');
 }
 
 console.log('Admin認証クライアント有効:', adminAuthEnabled);
+console.log('DB接続情報 - Supabase URL:', supabaseUrl);
 
 // Supabaseクライアントの初期化完了
 
@@ -314,29 +324,42 @@ export const deleteUser = async (id: string): Promise<boolean> => {
 
 // 測定データ関連の関数
 export const getMeasurements = async (): Promise<Measurement[]> => {
-  const { data, error } = await supabase
-    .from('measurements')
-    .select('*')
-    .order('measurement_date', { ascending: false });
+  console.log('DB: getMeasurements関数開始');
   
-  if (error) throw error;
-  
-  // キー名の変換（スネークケース→キャメルケース）
-  return data.map(item => ({
-    id: item.id,
-    userId: item.user_id,
-    measurementDate: item.measurement_date,
-    height: item.height,
-    weight: item.weight,
-    tug: item.tug,
-    walkingSpeed: item.walking_speed,
-    fr: item.fr,
-    cs10: item.cs10,
-    bi: item.bi,
-    notes: item.notes,
-    createdAt: item.created_at,
-    updatedAt: item.updated_at
-  }));
+  try {
+    // adminClientを使用してRLSをバイパス
+    const { data, error } = await adminClient
+      .from('measurements')
+      .select('*')
+      .order('measurement_date', { ascending: false });
+    
+    if (error) {
+      console.error('DB: 測定データ一覧取得エラー:', error);
+      throw error;
+    }
+    
+    console.log(`DB: ${data?.length || 0}件の測定データを取得しました`);
+    
+    // キー名の変換（スネークケース→キャメルケース）
+    return (data || []).map(item => ({
+      id: item.id,
+      userId: item.user_id,
+      measurementDate: item.measurement_date,
+      height: item.height,
+      weight: item.weight,
+      tug: item.tug,
+      walkingSpeed: item.walking_speed,
+      fr: item.fr,
+      cs10: item.cs10,
+      bi: item.bi !== null && item.bi !== undefined ? item.bi : 0,
+      notes: item.notes,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at
+    }));
+  } catch (error) {
+    console.error('DB: 測定データ一覧取得中にエラーが発生:', error);
+    throw error;
+  }
 };
 
 export const getMeasurementById = async (id: string): Promise<Measurement | null> => {
@@ -488,6 +511,7 @@ export const getLatestMeasurementsByUserId = async (userId: string, limit: numbe
 
 export const createMeasurement = async (measurementData: MeasurementFormData): Promise<Measurement> => {
   console.log('DB: createMeasurement関数開始', JSON.stringify(measurementData));
+  console.log('DB: Admin認証クライアント有効:', adminAuthEnabled);
 
   try {
     // キー名の変換（キャメルケース→スネークケース）
@@ -518,9 +542,10 @@ export const createMeasurement = async (measurementData: MeasurementFormData): P
     
     console.log('DB: Supabaseへ送信するデータ:', JSON.stringify(dbMeasurementData));
     console.log('DB: Supabase URL:', supabaseUrl);
-    console.log('DB: Admin認証クライアント使用:', adminAuthEnabled);
+    console.log('DB: adminClientが通常のsupabaseクライアントと同じ:', adminClient === supabase);
 
     // adminClientを使用してRLSをバイパス
+    console.log('DB: adminClientを使用してデータを挿入します');
     const { data, error, status } = await adminClient
       .from('measurements')
       .insert([dbMeasurementData])
@@ -539,7 +564,20 @@ export const createMeasurement = async (measurementData: MeasurementFormData): P
       if (error.code === '42P01') {
         throw new Error('テーブルが存在しません。データベース設定を確認してください。');
       } else if (error.code === '42501') {
-        throw new Error('データベースの権限が不足しています。RLS設定またはサービスロールキーを確認してください。');
+        // RLS権限エラーの詳細な情報を提供
+        console.error('DB: RLS権限エラーの可能性があります。サービスロールキーが正しく設定されているか確認してください。');
+        console.error('DB: SUPABASE_SERVICE_ROLE_KEY環境変数が設定されていることを確認してください。');
+        console.error('DB: クライアント情報:', {
+          adminAuthEnabled,
+          isAdminClientDefault: adminClient === supabase
+        });
+        throw new Error('データベースの権限が不足しているか、RLS設定が正しくないためにアクセスが拒否されました。管理者に連絡してください。');
+      } else if (error.code === '23505') {
+        throw new Error('同じ日付のデータがすでに存在します。別の日付を選択してください。');
+      } else if (error.code === '23502') {
+        throw new Error('必須項目が入力されていません。入力内容を確認してください。');
+      } else if (error.code === '23514') {
+        throw new Error('入力値が制約に違反しています。入力内容を確認してください。');
       } else {
         throw error;
       }
@@ -744,11 +782,28 @@ export const updateMeasurement = async (id: string, measurementData: Partial<Omi
 };
 
 export const deleteMeasurement = async (id: string): Promise<boolean> => {
-  const { error } = await supabase
-    .from('measurements')
-    .delete()
-    .eq('id', id);
+  console.log(`DB: deleteMeasurement関数開始 - ID: ${id}`);
   
-  if (error) throw error;
-  return true;
+  try {
+    // adminClientを使用してRLSをバイパス
+    const { error, status } = await adminClient
+      .from('measurements')
+      .delete()
+      .eq('id', id);
+    
+    console.log('DB: Supabase操作結果 - ステータス:', status);
+    
+    if (error) {
+      console.error('DB: 測定データ削除エラー:', error);
+      console.error('DB: エラーコード:', error.code);
+      console.error('DB: エラーメッセージ:', error.message);
+      throw error;
+    }
+    
+    console.log('DB: 測定データ削除成功 - ID:', id);
+    return true;
+  } catch (e) {
+    console.error('DB: deleteMeasurement関数でエラーが発生:', e);
+    throw e;
+  }
 };
