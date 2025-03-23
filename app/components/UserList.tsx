@@ -1,18 +1,30 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
-
-interface User {
-  id: string;
-  lastName: string;
-  firstName: string;
-}
+import { useSearchParams } from 'next/navigation';
+import { User } from '../lib/types';
 
 interface UserListProps {
   users: User[];
 }
 
 export default function UserList({ users = [] }: UserListProps) {
+  const searchParams = useSearchParams();
+  
+  // ページロード時にreloadパラメータをチェック
+  useEffect(() => {
+    // URLに?reload=trueが含まれている場合、ページをリロード
+    if (searchParams.get('reload') === 'true') {
+      // URLからreloadパラメータを削除するためにブラウザのURLを更新
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+      
+      // ページをリロード
+      window.location.reload();
+    }
+  }, [searchParams]);
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-4">

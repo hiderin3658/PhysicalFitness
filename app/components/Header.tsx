@@ -16,16 +16,7 @@ export default function Header() {
           
           <nav>
             <ul className="flex space-x-6">
-              <li>
-                <Link 
-                  href="/" 
-                  className={`hover:text-blue-200 transition-colors ${
-                    pathname === '/' ? 'font-bold underline' : ''
-                  }`}
-                >
-                  ユーザー一覧
-                </Link>
-              </li>
+              {/* ユーザー一覧リンクを削除 */}
             </ul>
           </nav>
         </div>

@@ -73,7 +73,10 @@ export default function CreateUserPage() {
       }
       
       console.log('フロントエンド: ユーザー作成成功:', result);
-      router.push('/'); // ホームページにリダイレクト
+      
+      // ユーザー登録成功後、リダイレクト先でリロードするために
+      // クエリパラメータを追加してリダイレクト
+      router.push('/?reload=true');
     } catch (err) {
       console.error('フロントエンド: ユーザー作成エラー:', err);
       setError(`ユーザーの作成に失敗しました: ${err instanceof Error ? err.message : '不明なエラー'}`);

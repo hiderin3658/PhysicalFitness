@@ -9,12 +9,18 @@ import { userId } from '../lib/auth';
 interface MeasurementFormProps {
   onSubmit: (data: MeasurementFormData) => void;
   initialData?: Partial<MeasurementFormData>;
+  selectedUser?: {
+    id: string;
+    lastName: string;
+    firstName: string;
+  };
 }
 
-export default function MeasurementForm({ onSubmit, initialData = {} }: MeasurementFormProps) {
+// 体力測定フォームコンポーネント
+export default function MeasurementForm({ onSubmit, initialData = {}, selectedUser }: MeasurementFormProps) {
   const [formData, setFormData] = useState<MeasurementFormData>({
-    userId: userId,
-    name: initialData.name || '',
+    userId: selectedUser?.id || userId,
+    name: initialData.name || (selectedUser ? `${selectedUser.lastName} ${selectedUser.firstName}` : ''),
     measurementDate: initialData.measurementDate || new Date().toISOString().split('T')[0],
     height: initialData.height || '',
     weight: initialData.weight || '',
@@ -31,7 +37,6 @@ export default function MeasurementForm({ onSubmit, initialData = {} }: Measurem
       second: initialData.fr?.second || '',
     },
     cs10: initialData.cs10 || '',
-    bi: initialData.bi || '',
     notes: initialData.notes || '',
   });
 
@@ -61,7 +66,7 @@ export default function MeasurementForm({ onSubmit, initialData = {} }: Measurem
     e.preventDefault();
     
     const processedData: MeasurementFormData = {
-      userId: userId, 
+      userId: selectedUser?.id || userId, 
       measurementDate: formData.measurementDate,
       height: parseFloat(formData.height as string) || 0, 
       weight: parseFloat(formData.weight as string) || 0, 
@@ -90,24 +95,30 @@ export default function MeasurementForm({ onSubmit, initialData = {} }: Measurem
         ),
       },
       cs10: parseFloat(formData.cs10 as string) || 0, 
-      bi: parseFloat(formData.bi as string) || 0, 
       notes: formData.notes, 
     };
 
     try {
       await createMeasurement(processedData);
       alert('測定データが保存されました');
-      router.push(`/result/${userId}`);
+      router.push(`/result/${selectedUser?.id || userId}`);
     } catch (error) {
       console.error('測定データの保存に失敗しました', error);
+      if (error instanceof Error) {
+        console.error('エラーメッセージ:', error.message);
+        console.error('エラータイプ:', error.name);
+        console.error('スタックトレース:', error.stack);
+      } else {
+        console.error('不明なエラー形式:', typeof error, error);
+      }
       alert('測定データの保存に失敗しました');
     }
   };
 
   const handleClear = () => {
     setFormData({
-      userId: userId,
-      name: '',
+      userId: selectedUser?.id || userId,
+      name: selectedUser ? `${selectedUser.lastName} ${selectedUser.firstName}` : '',
       measurementDate: new Date().toISOString().split('T')[0],
       height: '',
       weight: '',
@@ -124,7 +135,6 @@ export default function MeasurementForm({ onSubmit, initialData = {} }: Measurem
         second: '',
       },
       cs10: '',
-      bi: '',
       notes: '',
     });
   };
@@ -132,7 +142,6 @@ export default function MeasurementForm({ onSubmit, initialData = {} }: Measurem
   return (
     <div className="max-w-4xl mx-auto">
       <div className="bg-blue-50 p-8 rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold mb-6 text-center">体力測定フォーム</h1>
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 gap-4">
             {/* 氏名 */}
@@ -285,20 +294,6 @@ export default function MeasurementForm({ onSubmit, initialData = {} }: Measurem
                 type="number"
                 name="cs10"
                 value={formData.cs10}
-                onChange={handleChange}
-                className="flex-1 p-2 rounded bg-red-50"
-                step="0.1"
-                required
-              />
-            </div>
-
-            {/* BI */}
-            <div className="flex items-center">
-              <label className="w-32 text-right mr-4">BI</label>
-              <input
-                type="number"
-                name="bi"
-                value={formData.bi}
                 onChange={handleChange}
                 className="flex-1 p-2 rounded bg-red-50"
                 step="0.1"

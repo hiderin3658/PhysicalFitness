@@ -30,7 +30,7 @@ interface MeasurementFormData {
     best?: number;
   };
   cs10: number | string;
-  bi: number | string;
+  bi?: number | string;
   notes: string;
   name?: string; // MeasurementFormコンポーネントの互換性のため
 }
@@ -39,26 +39,30 @@ interface Measurement {
   id: string;
   userId: string;
   measurementDate: string;
-  height: number;
-  weight: number;
-  tug: {
+  height?: number;
+  weight?: number;
+  bmi?: number;
+  grip?: number;
+  walkingSpeed?: number | {
     first: number;
     second: number;
     best: number;
   };
-  walkingSpeed: {
+  oneLegStanding?: number;
+  functionalReach?: number;
+  tug?: {
     first: number;
     second: number;
     best: number;
   };
-  fr: {
+  fr?: {
     first: number;
     second: number;
     best: number;
   };
-  cs10: number;
-  bi: number;
-  notes: string;
+  cs10?: number;
+  bi?: number;
+  notes?: string;
   createdAt?: string;
   updatedAt?: string;
 }

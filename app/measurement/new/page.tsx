@@ -122,7 +122,7 @@ function MeasurementPageContent() {
       )}
       
       {selectedUser && (
-        <MeasurementForm onSubmit={handleSubmit} />
+        <MeasurementForm onSubmit={handleSubmit} selectedUser={selectedUser} />
       )}
       
       {!selectedUser && (
