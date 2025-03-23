@@ -18,6 +18,7 @@ interface MeasurementFormProps {
 
 // 体力測定フォームコンポーネント
 export default function MeasurementForm({ onSubmit, initialData = {}, selectedUser }: MeasurementFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [formData, setFormData] = useState<MeasurementFormData>({
     userId: selectedUser?.id || userId,
     name: initialData.name || (selectedUser ? `${selectedUser.lastName} ${selectedUser.firstName}` : ''),
@@ -64,54 +65,92 @@ export default function MeasurementForm({ onSubmit, initialData = {}, selectedUs
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     
-    const processedData: MeasurementFormData = {
-      userId: selectedUser?.id || userId, 
-      measurementDate: formData.measurementDate,
-      height: parseFloat(formData.height as string) || 0, 
-      weight: parseFloat(formData.weight as string) || 0, 
-      tug: {
-        first: parseFloat(formData.tug.first as string) || 0,
-        second: parseFloat(formData.tug.second as string) || 0,
-        best: Math.min(
-          parseFloat(formData.tug.first as string) || 0,
-          parseFloat(formData.tug.second as string) || 0
-        ),
-      },
-      walkingSpeed: {
-        first: parseFloat(formData.walkingSpeed.first as string) || 0,
-        second: parseFloat(formData.walkingSpeed.second as string) || 0,
-        best: Math.min(
-          parseFloat(formData.walkingSpeed.first as string) || 0,
-          parseFloat(formData.walkingSpeed.second as string) || 0
-        ),
-      },
-      fr: {
-        first: parseFloat(formData.fr.first as string) || 0,
-        second: parseFloat(formData.fr.second as string) || 0,
-        best: Math.max(
-          parseFloat(formData.fr.first as string) || 0,
-          parseFloat(formData.fr.second as string) || 0
-        ),
-      },
-      cs10: parseFloat(formData.cs10 as string) || 0, 
-      notes: formData.notes, 
-    };
+    console.log('フォームSubmit開始');
 
     try {
-      await createMeasurement(processedData);
-      alert('測定データが保存されました');
-      router.push(`/result/${selectedUser?.id || userId}`);
-    } catch (error) {
-      console.error('測定データの保存に失敗しました', error);
-      if (error instanceof Error) {
-        console.error('エラーメッセージ:', error.message);
-        console.error('エラータイプ:', error.name);
-        console.error('スタックトレース:', error.stack);
-      } else {
-        console.error('不明なエラー形式:', typeof error, error);
+      // 送信データの準備
+      const processedData: MeasurementFormData = {
+        userId: selectedUser?.id || userId, 
+        measurementDate: formData.measurementDate,
+        height: parseFloat(formData.height as string) || 0, 
+        weight: parseFloat(formData.weight as string) || 0, 
+        tug: {
+          first: parseFloat(formData.tug.first as string) || 0,
+          second: parseFloat(formData.tug.second as string) || 0,
+          best: Math.min(
+            parseFloat(formData.tug.first as string) || 0,
+            parseFloat(formData.tug.second as string) || 0
+          ),
+        },
+        walkingSpeed: {
+          first: parseFloat(formData.walkingSpeed.first as string) || 0,
+          second: parseFloat(formData.walkingSpeed.second as string) || 0,
+          best: Math.min(
+            parseFloat(formData.walkingSpeed.first as string) || 0,
+            parseFloat(formData.walkingSpeed.second as string) || 0
+          ),
+        },
+        fr: {
+          first: parseFloat(formData.fr.first as string) || 0,
+          second: parseFloat(formData.fr.second as string) || 0,
+          best: Math.max(
+            parseFloat(formData.fr.first as string) || 0,
+            parseFloat(formData.fr.second as string) || 0
+          ),
+        },
+        cs10: parseFloat(formData.cs10 as string) || 0, 
+        notes: formData.notes, 
+      };
+
+      console.log('送信データ:', JSON.stringify(processedData));
+      console.log('保存処理開始...');
+
+      try {
+        const result = await createMeasurement(processedData);
+        console.log('保存成功:', JSON.stringify(result));
+        window.alert('測定データを保存しました');
+        router.push(`/result/${selectedUser?.id || userId}`);
+      } catch (error) {
+        console.error('保存エラー:', error);
+        
+        // エラーの詳細情報を取得
+        let errorMessage = '測定データの保存に失敗しました。';
+        
+        if (error instanceof Error) {
+          errorMessage += ` ${error.message}`;
+          console.error('エラー詳細:', error.stack);
+        }
+        
+        // Supabaseの接続エラーかどうかをチェック
+        if (typeof error === 'object' && error !== null && 'code' in error) {
+          const supabaseError = error as { code: string; message: string; details?: string };
+          
+          if (supabaseError.code === 'PGRST301' || supabaseError.code === '22P02') {
+            errorMessage = 'データ形式が不正です。入力値を確認してください。';
+          } else if (supabaseError.code === '23505') {
+            errorMessage = '同じ日付のデータがすでに存在します。';
+          } else if (supabaseError.code === '42501') {
+            errorMessage = 'データベースの権限が不足しています。管理者に連絡してください。';
+          } else if (supabaseError.code === '503' || supabaseError.code === '500') {
+            errorMessage = 'データベースサービスに接続できません。ネットワーク接続を確認してください。';
+          }
+          
+          console.error('Supabaseエラー:', {
+            code: supabaseError.code,
+            message: supabaseError.message,
+            details: supabaseError.details
+          });
+        }
+        
+        window.alert(errorMessage);
       }
-      alert('測定データの保存に失敗しました');
+    } catch (error) {
+      console.error('フォーム処理エラー:', error);
+      window.alert('予期せぬエラーが発生しました。');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -314,19 +353,21 @@ export default function MeasurementForm({ onSubmit, initialData = {}, selectedUs
             </div>
           </div>
 
-          <div className="mt-6 flex justify-center space-x-4">
-            <button
-              type="submit"
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-            >
-              送信
-            </button>
+          {/* 送信ボタン */}
+          <div className="flex justify-center mt-8 space-x-4">
             <button
               type="button"
               onClick={handleClear}
-              className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+              className="px-6 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
             >
               クリア
+            </button>
+            <button
+              type="submit"
+              className={`px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? '送信中...' : '送信'}
             </button>
           </div>
         </form>

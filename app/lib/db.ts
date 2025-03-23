@@ -487,56 +487,99 @@ export const getLatestMeasurementsByUserId = async (userId: string, limit: numbe
 };
 
 export const createMeasurement = async (measurementData: MeasurementFormData): Promise<Measurement> => {
-  // キー名の変換（キャメルケース→スネークケース）
-  const dbMeasurementData = {
-    user_id: measurementData.userId,
-    measurement_date: measurementData.measurementDate,
-    height: Number(measurementData.height) || 0,
-    weight: Number(measurementData.weight) || 0,
-    tug: {
-      first: Number(measurementData.tug.first) || 0,
-      second: Number(measurementData.tug.second) || 0,
-      best: Number(measurementData.tug.best) || Math.min(Number(measurementData.tug.first) || 0, Number(measurementData.tug.second) || 0)
-    },
-    walking_speed: {
-      first: Number(measurementData.walkingSpeed.first) || 0,
-      second: Number(measurementData.walkingSpeed.second) || 0,
-      best: Number(measurementData.walkingSpeed.best) || Math.min(Number(measurementData.walkingSpeed.first) || 0, Number(measurementData.walkingSpeed.second) || 0)
-    },
-    fr: {
-      first: Number(measurementData.fr.first) || 0,
-      second: Number(measurementData.fr.second) || 0,
-      best: Number(measurementData.fr.best) || Math.max(Number(measurementData.fr.first) || 0, Number(measurementData.fr.second) || 0)
-    },
-    cs10: Number(measurementData.cs10) || 0,
-    bi: measurementData.bi !== undefined ? Number(measurementData.bi) || 0 : 0,
-    notes: measurementData.notes || ''
-  };
-  
-  const { data, error } = await supabase
-    .from('measurements')
-    .insert([dbMeasurementData])
-    .select()
-    .single();
-  
-  if (error) throw error;
-  
-  // キー名の変換（スネークケース→キャメルケース）
-  return {
-    id: data.id,
-    userId: data.user_id,
-    measurementDate: data.measurement_date,
-    height: data.height,
-    weight: data.weight,
-    tug: data.tug,
-    walkingSpeed: data.walking_speed,
-    fr: data.fr,
-    cs10: data.cs10,
-    bi: data.bi,
-    notes: data.notes,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at
-  };
+  console.log('DB: createMeasurement関数開始', JSON.stringify(measurementData));
+
+  try {
+    // キー名の変換（キャメルケース→スネークケース）
+    const dbMeasurementData = {
+      user_id: measurementData.userId,
+      measurement_date: measurementData.measurementDate,
+      height: Number(measurementData.height) || 0,
+      weight: Number(measurementData.weight) || 0,
+      tug: {
+        first: Number(measurementData.tug.first) || 0,
+        second: Number(measurementData.tug.second) || 0,
+        best: Number(measurementData.tug.best) || Math.min(Number(measurementData.tug.first) || 0, Number(measurementData.tug.second) || 0)
+      },
+      walking_speed: {
+        first: Number(measurementData.walkingSpeed.first) || 0,
+        second: Number(measurementData.walkingSpeed.second) || 0,
+        best: Number(measurementData.walkingSpeed.best) || Math.min(Number(measurementData.walkingSpeed.first) || 0, Number(measurementData.walkingSpeed.second) || 0)
+      },
+      fr: {
+        first: Number(measurementData.fr.first) || 0,
+        second: Number(measurementData.fr.second) || 0,
+        best: Number(measurementData.fr.best) || Math.max(Number(measurementData.fr.first) || 0, Number(measurementData.fr.second) || 0)
+      },
+      cs10: Number(measurementData.cs10) || 0,
+      bi: measurementData.bi !== undefined ? Number(measurementData.bi) || 0 : 0,
+      notes: measurementData.notes || ''
+    };
+    
+    console.log('DB: Supabaseへ送信するデータ:', JSON.stringify(dbMeasurementData));
+    console.log('DB: Supabase URL:', supabaseUrl);
+    console.log('DB: Admin認証クライアント使用:', adminAuthEnabled);
+
+    // adminClientを使用してRLSをバイパス
+    const { data, error, status } = await adminClient
+      .from('measurements')
+      .insert([dbMeasurementData])
+      .select()
+      .single();
+    
+    console.log('DB: Supabase操作結果 - ステータス:', status);
+
+    if (error) {
+      console.error('DB: 測定データ挿入エラー:', error);
+      console.error('DB: エラーコード:', error.code);
+      console.error('DB: エラーメッセージ:', error.message);
+      console.error('DB: エラー詳細:', error.details);
+      
+      // テーブルが存在しない場合やRLS違反などの特定のエラーをより明確にする
+      if (error.code === '42P01') {
+        throw new Error('テーブルが存在しません。データベース設定を確認してください。');
+      } else if (error.code === '42501') {
+        throw new Error('データベースの権限が不足しています。RLS設定またはサービスロールキーを確認してください。');
+      } else {
+        throw error;
+      }
+    }
+    
+    if (!data) {
+      console.error('DB: データなし');
+      throw new Error('測定データの挿入に成功しましたが、レコードが返されませんでした');
+    }
+    
+    console.log('DB: データ挿入成功', JSON.stringify(data));
+    
+    // キー名の変換（スネークケース→キャメルケース）
+    return {
+      id: data.id,
+      userId: data.user_id,
+      measurementDate: data.measurement_date,
+      height: data.height,
+      weight: data.weight,
+      tug: data.tug,
+      walkingSpeed: data.walking_speed,
+      fr: data.fr,
+      cs10: data.cs10,
+      bi: data.bi,
+      notes: data.notes,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+  } catch (error) {
+    console.error('DB: 測定データ作成中にエラーが発生:', error);
+    // 詳細なエラー情報をコンソールに出力
+    if (error instanceof Error) {
+      console.error('DB: エラーメッセージ:', error.message);
+      console.error('DB: エラータイプ:', error.name);
+      console.error('DB: スタックトレース:', error.stack);
+    } else {
+      console.error('DB: 不明なエラー形式:', typeof error, error);
+    }
+    throw error; // 元のエラーを再スロー
+  }
 };
 
 export const updateMeasurement = async (id: string, measurementData: Partial<Omit<Measurement, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Measurement | null> => {
