@@ -2,12 +2,18 @@
 
 体力測定の結果を記録・管理するためのウェブアプリケーションです。
 
+## デプロイ先
+
+アプリケーションは以下のURLでデプロイされています：
+https://physical-fitness-teal.vercel.app/
+
 ## 技術スタック
 
 - **フロントエンド**: Next.js, React, TypeScript, Tailwind CSS
 - **バックエンド**: Next.js API Routes
 - **データベース**: Supabase
 - **認証**: Supabaseの認証機能
+- **デプロイ**: Vercel
 
 ## 環境構築
 
